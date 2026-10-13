@@ -1,6 +1,8 @@
 from __future__ import annotations
 import json, sys, time, multiprocessing, pickle, os
+from functools import partial
 from typing import Dict, Any, Optional, Callable, List
+from functools import partial
 import requests
 
 from PySide6 import QtCore, QtGui, QtWidgets
@@ -960,30 +962,6 @@ class MultiCollectionExportDialog(QtWidgets.QDialog):
         self.setModal(True)
         self.setMinimumSize(500, 400)
         self._size_dialog_to_parent(0.7, 0.7)
-
-        layout = QtWidgets.QVBoxLayout(self)
-
-    def _size_dialog_to_parent(self, width_ratio=0.7, height_ratio=0.7):
-        """Size dialog relative to parent window or screen"""
-        if self.parent() and isinstance(self.parent(), QtWidgets.QWidget):
-            parent_size = self.parent().size()
-            target_width = int(parent_size.width() * width_ratio)
-            target_height = int(parent_size.height() * height_ratio)
-        else:
-            screen = QtWidgets.QApplication.primaryScreen()
-            if screen:
-                available = screen.availableGeometry()
-                target_width = int(available.width() * width_ratio)
-                target_height = int(available.height() * height_ratio)
-            else:
-                return
-
-        # Ensure we don't go below minimum size
-        current_min = self.minimumSize()
-        target_width = max(target_width, current_min.width())
-        target_height = max(target_height, current_min.height())
-
-        self.resize(target_width, target_height)
 
         layout = QtWidgets.QVBoxLayout(self)
 
@@ -2002,6 +1980,16 @@ def start_ui(runner: Optional[Callable[[Dict[str, Any]], Dict[str, Any]]] = None
         # Already set, ignore
         pass
 
+    # CRITICAL: Set Windows AppUserModelID BEFORE creating QApplication
+    # This is required for the taskbar icon to display correctly on Windows.
+    # Must be called before any Qt windows are created.
+    try:
+        import ctypes
+        app_id = 'Firesand.AuthMatrix.1.0'
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
+    except (AttributeError, OSError):
+        pass  # Not on Windows or API not available
+
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
     
     # Set application icon for Windows taskbar
@@ -2027,13 +2015,6 @@ def start_ui(runner: Optional[Callable[[Dict[str, Any]], Dict[str, Any]]] = None
     if icon_path:
         app_icon = QtGui.QIcon(str(icon_path))
         app.setWindowIcon(app_icon)
-        # On Windows, also set the app user model ID to ensure taskbar icon works
-        try:
-            import ctypes
-            app_id = 'Firesand.AuthMatrix.1.0'
-            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
-        except:
-            pass  # Not on Windows or API not available
     
     mw = MainWindow(runner=runner)
     mw.show()

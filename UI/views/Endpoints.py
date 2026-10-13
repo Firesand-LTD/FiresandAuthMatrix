@@ -640,7 +640,19 @@ class ConfigureAllEndpointsDialog(QtWidgets.QDialog):
         self.store = store
         self.setWindowTitle("Configure All Endpoints")
         self.setModal(True)
-        self.resize(720, 560)
+        
+        # Calculate full-width dimensions based on screen size
+        screen = QtWidgets.QApplication.primaryScreen()
+        if screen is not None:
+            available = screen.availableGeometry()
+            # Use 90% of screen width for full-width effect, with reasonable max
+            target_width = min(int(available.width() * 0.9), 1600)
+            # Keep height reasonable - 70% of screen height
+            target_height = min(int(available.height() * 0.7), 800)
+            self.resize(target_width, target_height)
+        else:
+            # Fallback to larger fixed size if screen info unavailable
+            self.resize(1200, 700)
         
         layout = QtWidgets.QVBoxLayout(self)
         
@@ -733,6 +745,16 @@ class ConfigureAllEndpointsDialog(QtWidgets.QDialog):
     def _refresh_endpoints_table(self):
         endpoints = self.store.spec.get("endpoints", [])
         self.endpoints_table.setRowCount(len(endpoints))
+        
+        # Configure header resize modes for full-width table
+        header = self.endpoints_table.horizontalHeader()
+        header.setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)  # Endpoint - fit content
+        header.setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeToContents)  # Method - fit content
+        header.setSectionResizeMode(2, QtWidgets.QHeaderView.Stretch)           # Path - stretch to fill space
+        header.setSectionResizeMode(3, QtWidgets.QHeaderView.Fixed)             # Configure - fixed width
+        
+        # Set fixed width for Configure button column
+        self.endpoints_table.setColumnWidth(3, 120)
         
         for i, endpoint in enumerate(endpoints):
             # Endpoint name
